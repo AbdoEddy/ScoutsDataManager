@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-key me-2"></i>Gestion des permissions</h1>
+    </div>
+
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-table me-2"></i>Tables</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for t in tables %}
+                    <a href="{{ url_for('manage_table_permissions', table_id=t.id) }}" 
+                       class="list-group-item list-group-item-action {% if current_table and t.id == current_table.id %}active{% endif %}">
+                        {{ t.display_name }}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-9">
+            {% if current_table %}
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Permissions pour {{ current_table.display_name }}</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Bulk Grant Permissions -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0"><i class="fas fa-users me-2"></i>Accorder l'accès à toutes les données</h6>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" action="{{ url_for('bulk_grant_permissions', table_id=current_table.id) }}">
+                                <div class="row align-items-end">
+                                    <div class="col-md-8">
+                                        <div class="mb-3">
+                                            <label for="bulk_user_id" class="form-label">Utilisateur</label>
+                                            <select class="form-select" name="user_id" required>
+                                                <option value="">Sélectionner un utilisateur</option>
+                                                {% for user in users %}
+                                                {% if user.role == 'readonly' %}
+                                                <option value="{{ user.id }}">{{ user.username }} (Lecture seule)</option>
+                                                {% endif %}
+                                                {% endfor %}
+                                            </select>
+                                            <div class="form-text">Ceci accordera l'accès en lecture à tous les enregistrements existants de cette table.</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <button type="submit" class="btn btn-info w-100" onclick="return confirm('Êtes-vous sûr de vouloir accorder l\'accès à toutes les données de cette table ?')">
+                                                <i class="fas fa-globe me-1"></i>Accorder l'accès total
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Individual Permission -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-key me-2"></i>Ajouter une permission spécifique</h6>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST">
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <div class="mb-3">
+                                            <label class="form-label">Utilisateur</label>
+                                            <select name="user_id" class="form-select" required>
+                                                <option value="">Sélectionner un utilisateur</option>
+                                                {% for user in users %}
+                                                <option value="{{ user.id }}">{{ user.username }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="mb-3">
+                                            <label class="form-label">Type de permission</label>
+                                            <select name="permission_type" class="form-select" id="permissionType" required>
+                                                <option value="">Sélectionner le type</option>
+                                                <option value="all_access">Accès total</option>
+                                                <option value="specific">Permission spécifique</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3" id="fieldSelection" style="display: none;">
+                                        <div class="mb-3">
+                                            <label class="form-label">Champ</label>
+                                            <select name="field_id" class="form-select">
+                                                <option value="">Sélectionner un champ</option>
+                                                {% for field in fields %}
+                                                <option value="{{ field.id }}">{{ field.display_name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3" id="valueSelection" style="display: none;">
+                                        <div class="mb-3">
+                                            <label class="form-label">Valeur</label>
+                                            <input type="text" name="match_value" class="form-control" placeholder="Valeur exacte">
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-plus me-1"></i>Ajouter la permission
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <script>
+                    document.getElementById('permissionType').addEventListener('change', function() {
+                        const fieldSelection = document.getElementById('fieldSelection');
+                        const valueSelection = document.getElementById('valueSelection');
+
+                        if (this.value === 'specific') {
+                            fieldSelection.style.display = 'block';
+                            valueSelection.style.display = 'block';
+                            fieldSelection.querySelector('select').required = true;
+                            valueSelection.querySelector('input').required = true;
+                        } else {
+                            fieldSelection.style.display = 'none';
+                            valueSelection.style.display = 'none';
+                            fieldSelection.querySelector('select').required = false;
+                            valueSelection.querySelector('input').required = false;
+                        }
+                    });
+                    </script>
+
+                    <!-- Current Permissions -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-list me-2"></i>Permissions actuelles</h6>
+                        </div>
+                        <div class="card-body">
+                            {% if permissions %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Utilisateur</th>
+                                            <th>Champ</th>
+                                            <th>Valeur</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for permission in permissions %}
+                                        <tr>
+                                            <td>
+                                                {{ permission.user.username }}
+                                                {% if permission.user.role == 'readonly' %}
+                                                <span class="badge bg-secondary ms-1">Lecture seule</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if permission.all_access %}
+                                                <span class="badge bg-success"><i class="fas fa-globe me-1"></i>Accès total</span>
+                                                {% else %}
+                                                {{ permission.field.display_name }}
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if permission.all_access %}
+                                                <span class="text-muted"><em>Toutes les données</em></span>
+                                                {% else %}
+                                                <code>{{ permission.match_value }}</code>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <form method="POST" action="{{ url_for('delete_table_permission', table_id=current_table.id, permission_id=permission.id) }}" class="d-inline">
+                                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette permission ?')">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="text-center text-muted">
+                                <p>Aucune permission configurée pour cette table.</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>Aucune table n'est disponible.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

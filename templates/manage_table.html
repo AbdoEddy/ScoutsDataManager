@@ -1,0 +1,451 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    {% if manage_mode == 'tables' %}
+        {% if edit_table %}
+            Modifier la table
+        {% else %}
+            Gestion des tables
+        {% endif %}
+    {% else %}
+        {% if edit_field %}
+            Modifier le champ
+        {% else %}
+            Gestion des champs
+        {% endif %}
+    {% endif %}
+{% endblock %}
+
+{% block head %}
+<style>
+    .sortable-ghost {
+        background-color: var(--bs-dark-bg-subtle);
+        opacity: 0.5;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-4 d-flex justify-content-between align-items-center">
+    {% if manage_mode == 'tables' %}
+        <h1>
+            {% if edit_table %}
+                <i class="fas fa-edit me-2"></i>Modifier la table
+            {% else %}
+                <i class="fas fa-database me-2"></i>Gestion des tables
+            {% endif %}
+        </h1>
+    {% else %}
+        <h1>
+            {% if edit_field %}
+                <i class="fas fa-edit me-2"></i>Modifier le champ
+            {% else %}
+                <i class="fas fa-list me-2"></i>Gestion des champs - {{ table.display_name }}
+            {% endif %}
+        </h1>
+        <a href="{{ url_for('manage_tables') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Retour aux tables
+        </a>
+    {% endif %}
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        {% if manage_mode == 'tables' %}
+            <!-- Tables List -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-table me-2"></i>Liste des tables</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Nom technique</th>
+                                    <th>Nom d'affichage</th>
+                                    <th>Description</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for table in tables %}
+                                <tr>
+                                    <td>{{ table.id }}</td>
+                                    <td>{{ table.name }}</td>
+                                    <td>{{ table.display_name }}</td>
+                                    <td>{{ table.description or '-' }}</td>
+                                    <td class="text-end">
+                                        <a href="{{ url_for('manage_fields', table_id=table.id) }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-list"></i>
+                                        </a>
+                                        <a href="{{ url_for('edit_table', table_id=table.id) }}" class="btn btn-sm btn-outline-warning">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                data-bs-toggle="modal" data-bs-target="#deleteModal{{ table.id }}">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+
+                                        <!-- Delete Confirmation Modal -->
+                                        <div class="modal fade" id="deleteModal{{ table.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ table.id }}" aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title" id="deleteModalLabel{{ table.id }}">Confirmer la suppression</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        Êtes-vous sûr de vouloir supprimer la table <strong>{{ table.display_name }}</strong> ? Cette action supprimera toutes les données associées et est irréversible.
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                                        <form action="{{ url_for('delete_table', table_id=table.id) }}" method="POST">
+                                                            <button type="submit" class="btn btn-danger">Supprimer</button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <!-- Fields List -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Liste des champs</h5>
+                        {% if fields %}
+                        <button id="reorderBtn" class="btn btn-sm btn-outline-light">
+                            <i class="fas fa-sort me-1"></i>Réorganiser
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Nom technique</th>
+                                    <th>Nom d'affichage</th>
+                                    <th>Type</th>
+                                    <th>Obligatoire</th>
+                                    <th>Unique</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sortableFields">
+                                {% for field in fields %}
+                                <tr data-id="{{ field.id }}">
+                                    <td>{{ field.id }}</td>
+                                    <td>{{ field.name }}</td>
+                                    <td>{{ field.display_name }}</td>
+                                    <td>
+                                        {% if field.field_type == 'text' %}
+                                            <span class="badge bg-info">Texte</span>
+                                        {% elif field.field_type == 'number' %}
+                                            <span class="badge bg-success">Nombre</span>
+                                        {% elif field.field_type == 'date' %}
+                                            <span class="badge bg-warning">Date</span>
+                                        {% elif field.field_type == 'dropdown' %}
+                                            <span class="badge bg-primary">Liste déroulante</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if field.required %}
+                                            <span class="badge bg-success">Oui</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Non</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if field.unique %}
+                                            <span class="badge bg-success">Oui</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Non</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <a href="{{ url_for('edit_field', table_id=table.id, field_id=field.id) }}" class="btn btn-sm btn-outline-warning">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                data-bs-toggle="modal" data-bs-target="#deleteFieldModal{{ field.id }}">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+
+                                        <!-- Delete Confirmation Modal -->
+                                        <div class="modal fade" id="deleteFieldModal{{ field.id }}" tabindex="-1" aria-labelledby="deleteFieldModalLabel{{ field.id }}" aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title" id="deleteFieldModalLabel{{ field.id }}">Confirmer la suppression</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        Êtes-vous sûr de vouloir supprimer le champ <strong>{{ field.display_name }}</strong> ? Cette action supprimera toutes les valeurs associées et est irréversible.
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                                        <form action="{{ url_for('delete_field', table_id=table.id, field_id=field.id) }}" method="POST">
+                                                            <button type="submit" class="btn btn-danger">Supprimer</button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+
+                                {% if not fields %}
+                                <tr>
+                                    <td colspan="6" class="text-center">Aucun champ défini pour cette table.</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="col-md-4">
+        {% if manage_mode == 'tables' %}
+            <!-- Table Form -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        {% if edit_table %}
+                            <i class="fas fa-edit me-2"></i>Modifier la table
+                        {% else %}
+                            <i class="fas fa-plus-circle me-2"></i>Ajouter une table
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{% if edit_table %}{{ url_for('edit_table', table_id=edit_table.id) }}{% else %}{{ url_for('add_table') }}{% endif %}">
+                        {{ form.hidden_tag() }}
+
+                        <div class="mb-3">
+                            <label for="{{ form.name.id }}" class="form-label">{{ form.name.label }}</label>
+                            {{ form.name(class="form-control") }}
+                            <small class="form-text text-muted">Utilisé en interne, sans espaces ni caractères spéciaux.</small>
+                            {% for error in form.name.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.display_name.id }}" class="form-label">{{ form.display_name.label }}</label>
+                            {{ form.display_name(class="form-control") }}
+                            <small class="form-text text-muted">Nom affiché aux utilisateurs.</small>
+                            {% for error in form.display_name.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.description.id }}" class="form-label">{{ form.description.label }}</label>
+                            {{ form.description(class="form-control", rows=3) }}
+                            {% for error in form.description.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            {% if edit_table %}
+                                <button type="submit" class="btn btn-warning">
+                                    <i class="fas fa-save me-1"></i>Enregistrer les modifications
+                                </button>
+                                <a href="{{ url_for('manage_tables') }}" class="btn btn-outline-secondary">Annuler</a>
+                            {% else %}
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-plus-circle me-1"></i>Ajouter la table
+                                </button>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        {% else %}
+            <!-- Field Form -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        {% if edit_field %}
+                            <i class="fas fa-edit me-2"></i>Modifier le champ
+                        {% else %}
+                            <i class="fas fa-plus-circle me-2"></i>Ajouter un champ
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{% if edit_field %}{{ url_for('edit_field', table_id=table.id, field_id=edit_field.id) }}{% else %}{{ url_for('add_field', table_id=table.id) }}{% endif %}">
+                        {{ form.hidden_tag() }}
+
+                        <div class="mb-3">
+                            <label for="{{ form.name.id }}" class="form-label">{{ form.name.label }}</label>
+                            {{ form.name(class="form-control") }}
+                            <small class="form-text text-muted">Utilisé en interne, sans espaces ni caractères spéciaux.</small>
+                            {% for error in form.name.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.display_name.id }}" class="form-label">{{ form.display_name.label }}</label>
+                            {{ form.display_name(class="form-control") }}
+                            <small class="form-text text-muted">Nom affiché aux utilisateurs.</small>
+                            {% for error in form.display_name.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.field_type.id }}" class="form-label">{{ form.field_type.label }}</label>
+                            {{ form.field_type(class="form-select", id="fieldTypeSelect") }}
+                            {% for error in form.field_type.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                {{ form.required(class="form-check-input") }}
+                                <label class="form-check-label" for="{{ form.required.id }}">
+                                    {{ form.required.label }}
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                {{ form.unique(class="form-check-input") }}
+                                <label class="form-check-label" for="{{ form.unique.id }}">
+                                    {{ form.unique.label }}
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mb-3" id="optionsGroup">
+                            <label for="{{ form.options.id }}" class="form-label">{{ form.options.label }}</label>
+                            {{ form.options(class="form-control", rows=4, placeholder="Option 1\nOption 2\nOption 3") }}
+                            <small class="form-text text-muted">Une option par ligne.</small>
+                            {% for error in form.options.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            {% if edit_field %}
+                                <button type="submit" class="btn btn-warning">
+                                    <i class="fas fa-save me-1"></i>Enregistrer les modifications
+                                </button>
+                                <a href="{{ url_for('manage_fields', table_id=table.id) }}" class="btn btn-outline-secondary">Annuler</a>
+                            {% else %}
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-plus-circle me-1"></i>Ajouter le champ
+                                </button>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if manage_mode == 'fields' %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Toggle options field visibility based on field type
+        const fieldTypeSelect = document.getElementById('fieldTypeSelect');
+        const optionsGroup = document.getElementById('optionsGroup');
+
+        function toggleOptionsVisibility() {
+            if (fieldTypeSelect.value === 'dropdown') {
+                optionsGroup.style.display = 'block';
+            } else {
+                optionsGroup.style.display = 'none';
+            }
+        }
+
+        // Initialize visibility
+        toggleOptionsVisibility();
+
+        // Add event listener
+        fieldTypeSelect.addEventListener('change', toggleOptionsVisibility);
+
+        // Sortable fields
+        const sortableFields = document.getElementById('sortableFields');
+        if (sortableFields) {
+            let sortable = null;
+            const reorderBtn = document.getElementById('reorderBtn');
+
+            reorderBtn.addEventListener('click', function() {
+                if (sortable) {
+                    // Disable sorting and save order
+                    const newOrder = {};
+                    const items = sortableFields.querySelectorAll('tr');
+
+                    items.forEach((item, index) => {
+                        const id = item.getAttribute('data-id');
+                        newOrder[id] = index + 1;
+                    });
+
+                    // Send order to server
+                    fetch('{{ url_for("reorder_fields", table_id=table.id) }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({fields: newOrder}),
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Success message
+                            alert('L\'ordre des champs a été enregistré avec succès.');
+                            location.reload();
+                        } else {
+                            alert('Une erreur est survenue lors de l\'enregistrement de l\'ordre des champs.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Une erreur est survenue lors de l\'enregistrement de l\'ordre des champs.');
+                    });
+
+                    sortable.destroy();
+                    sortable = null;
+                    reorderBtn.innerHTML = '<i class="fas fa-sort me-1"></i>Réorganiser';
+                    reorderBtn.classList.remove('btn-warning');
+                    reorderBtn.classList.add('btn-outline-light');
+                } else {
+                    // Enable sorting
+                    sortable = new Sortable(sortableFields, {
+                        animation: 150,
+                        ghostClass: 'sortable-ghost',
+                        handle: 'td'
+                    });
+                    reorderBtn.innerHTML = '<i class="fas fa-save me-1"></i>Enregistrer l\'ordre';
+                    reorderBtn.classList.remove('btn-outline-light');
+                    reorderBtn.classList.add('btn-warning');
+                }
+            });
+        }
+    });
+</script>
+{% endif %}
+{% endblock %}

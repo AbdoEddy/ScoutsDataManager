@@ -1,0 +1,346 @@
+{% extends 'base.html' %}
+
+{% block title %}Tableau de bord{% endblock %}
+
+{% block head %}
+<style>
+    .stat-card {
+        transition: transform 0.3s;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h1><i class="fas fa-tachometer-alt me-2"></i>Tableau de bord</h1>
+    <p class="lead">Bienvenue dans le système de gestion des scouts</p>
+</div>
+
+<div class="row mb-4">
+    <!-- Statistics Cards -->
+    {% if current_user.is_admin() %}
+    <div class="col-md-3 mb-3">
+        <div class="card text-white bg-primary stat-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title">Utilisateurs</h5>
+                        <h2 class="mb-0">{{ user_count }}</h2>
+                        <p class="text-white-50 small mb-0">
+                            {% if admin_count %}Admins: {{ admin_count }}{% endif %}
+                            {% if editor_count %} • Éditeurs: {{ editor_count }}{% endif %}
+                            {% if readonly_count %} • Lecture: {{ readonly_count }}{% endif %}
+                        </p>
+                    </div>
+                    <div>
+                        <i class="fas fa-users fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="col-md-3 mb-3">
+        <div class="card text-white bg-success stat-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title">Enregistrements</h5>
+                        <h2 class="mb-0">{{ record_count }}</h2>
+                        <p class="text-white-50 small mb-0">
+                            {% if record_today_count %}Aujourd'hui: {{ record_today_count }}{% endif %}
+                            {% if record_week_count %} • Cette semaine: {{ record_week_count }}{% endif %}
+                        </p>
+                    </div>
+                    <div>
+                        <i class="fas fa-database fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-3">
+        <div class="card stat-card h-100">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Répartition des données</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="tableStatsChart" height="150"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Data Trends Row -->
+{% if current_user.is_editor() %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Tendance des enregistrements</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="recordsTrendChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Activité par jour</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="activityByDayChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row">
+    <!-- Table Stats -->
+    <div class="col-md-6 mb-3">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-table me-2"></i>Statistiques par table</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Table</th>
+                                {% if current_user.is_editor() %}
+                                <th class="text-end">Nombre d'enregistrements</th>
+                                {% endif %}
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stat in table_stats %}
+                            <tr>
+                                <td>{{ stat.name }}</td>
+                                {% if current_user.is_editor() %}
+                                <td class="text-end">{{ stat.count }}</td>
+                                {% endif %}
+                                <td class="text-end">
+                                    <a href="{{ url_for('tables') }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Records -->
+    <div class="col-md-6 mb-3">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-history me-2"></i>Activité récente</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Table</th>
+                                <th>Date</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in recent_records %}
+                            <tr>
+                                <td>{{ record.table_name }}</td>
+                                <td>{{ record.created_at }}</td>
+                                <td class="text-end">
+                                    <a href="{{ url_for('view_record', table_id=record.table_id, record_id=record.id) }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% if not recent_records %}
+                            <tr>
+                                <td colspan="3" class="text-center">Aucune activité récente</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Chart colors
+    const colors = {
+        blue: 'rgba(54, 162, 235, 0.7)',
+        red: 'rgba(255, 99, 132, 0.7)',
+        green: 'rgba(75, 192, 192, 0.7)',
+        yellow: 'rgba(255, 206, 86, 0.7)',
+        purple: 'rgba(153, 102, 255, 0.7)',
+        orange: 'rgba(255, 159, 64, 0.7)',
+        grey: 'rgba(201, 203, 207, 0.7)'
+    };
+
+    // 1. Pie Chart for table distribution
+    const tableData = {{ table_stats|tojson }};
+    const labels = tableData.map(item => item.name);
+    const counts = tableData.map(item => item.count);
+
+    if (labels.length > 0) {
+        const ctx = document.getElementById('tableStatsChart').getContext('2d');
+        const tableStatsChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: counts,
+                    backgroundColor: [
+                        colors.blue,
+                        colors.red,
+                        colors.green,
+                        colors.yellow,
+                        colors.purple,
+                        colors.orange,
+                        colors.grey
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            color: getComputedStyle(document.documentElement).getPropertyValue('--bs-body-color')
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.raw || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = Math.round((value / total) * 100);
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 2. Line Chart for record trends
+    const recordTrendData = JSON.parse('{{ records_trend_data|safe }}') || [];
+    if (Array.isArray(recordTrendData) && recordTrendData.length > 0) {
+        const trendCtx = document.getElementById('recordsTrendChart').getContext('2d');
+        const trendChart = new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: recordTrendData.map(item => formatDate(item.date)),
+                datasets: [{
+                    label: 'Enregistrements',
+                    data: recordTrendData.map(item => item.count),
+                    borderColor: colors.green.replace('0.7', '1'),
+                    backgroundColor: colors.green,
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--bs-body-color') },
+                        grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--bs-border-color') }
+                    },
+                    x: {
+                        ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--bs-body-color') },
+                        grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--bs-border-color') }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+    }
+
+    // 3. Bar Chart for activity by day of week
+    const activityByDay = JSON.parse('{{ activity_by_day|safe }}');
+    if (activityByDay && activityByDay.length > 0) {
+        const daysOfWeek = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+        const activityCtx = document.getElementById('activityByDayChart').getContext('2d');
+        const activityChart = new Chart(activityCtx, {
+            type: 'bar',
+            data: {
+                labels: daysOfWeek,
+                datasets: [{
+                    label: 'Activité',
+                    data: daysOfWeek.map(day => {
+                        const dayData = activityByDay.find(d => d.day === day);
+                        return dayData ? dayData.count : 0;
+                    }),
+                    backgroundColor: colors.blue,
+                    borderColor: colors.blue.replace('0.7', '1'),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--bs-body-color') },
+                        grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--bs-border-color') }
+                    },
+                    x: {
+                        ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--bs-body-color') },
+                        grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--bs-border-color') }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+    }
+
+    // Helper function to format dates
+    function formatDate(dateStr) {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('fr-FR', {
+            day: '2-digit',
+            month: '2-digit'
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,266 @@
+/**
+ * Custom CSS for the Scout Management Application
+ * Extends the Bootstrap theme with custom styling
+ */
+
+/* General styles */
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+}
+
+/* Card hover effects */
+.stat-card {
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+.table-card {
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.table-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Form styling */
+.form-control, .form-select {
+    background-color: var(--bs-body-bg);
+    border-color: var(--bs-border-color);
+    color: var(--bs-body-color);
+}
+
+.form-control:focus, .form-select:focus {
+    background-color: var(--bs-body-bg);
+    color: var(--bs-body-color);
+}
+
+.form-control:disabled, .form-select:disabled {
+    background-color: var(--bs-dark);
+    opacity: 0.7;
+}
+
+/* Date input styling */
+input[type="date"] {
+    position: relative;
+}
+
+.date-display {
+    margin-top: 5px;
+    font-size: 0.875rem;
+    color: var(--bs-gray-500);
+}
+
+/* Dropdown styling */
+.dropdown-item:active, .dropdown-item:focus {
+    background-color: var(--bs-primary);
+}
+
+/* Table styling */
+.table-hover tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Form validation styling */
+.is-invalid {
+    border-color: var(--bs-danger) !important;
+}
+
+.invalid-feedback {
+    color: var(--bs-danger);
+    display: block;
+    margin-top: 0.25rem;
+}
+
+/* Badge styling */
+.badge {
+    font-weight: 500;
+    padding: 0.35em 0.65em;
+}
+
+/* Improve contrast for text on darker backgrounds */
+.text-muted {
+    color: var(--bs-gray-400) !important;
+}
+
+/* Notification alerts container */
+#alerts-container {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    z-index: 1050;
+    max-width: 350px;
+}
+
+.notification-alert {
+    margin-bottom: 0.5rem;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Sortable elements styling */
+.sortable-ghost {
+    background-color: var(--bs-dark-bg-subtle) !important;
+    opacity: 0.5;
+}
+
+/* Improve navbar on mobile */
+@media (max-width: 768px) {
+    .navbar-brand {
+        font-size: 1.1rem;
+    }
+
+    .navbar-toggler {
+        font-size: 0.9rem;
+    }
+
+    .card-header {
+        padding: 0.75rem;
+    }
+
+    .table-sm td, .table-sm th {
+        padding: 0.3rem;
+    }
+
+    .btn-sm {
+        padding: 0.25rem 0.4rem;
+        font-size: 0.7rem;
+    }
+}
+
+/* Dashboard styling */
+.dashboard-icon {
+    font-size: 2.5rem;
+    opacity: 0.7;
+}
+
+/* Make charts responsive */
+canvas {
+    max-width: 100%;
+}
+
+/* Improve form-check appearance */
+.form-check-input {
+    background-color: var(--bs-dark-bg-subtle);
+    border-color: var(--bs-gray-500);
+}
+
+.form-check-input:checked {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+}
+
+/* Better table borders */
+.table {
+    border-color: var(--bs-border-color);
+}
+
+/* Animation for saving */
+@keyframes highlight-success {
+    0% {
+        border-color: var(--bs-border-color);
+    }
+    50% {
+        border-color: var(--bs-success);
+    }
+    100% {
+        border-color: var(--bs-border-color);
+    }
+}
+
+.border-success {
+    animation: highlight-success 1s;
+}
+
+/* Reorder button visual feedback */
+#reorderBtn.btn-warning {
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(255, 193, 7, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 193, 7, 0);
+    }
+}
+
+/* Character counter styling */
+.char-counter {
+    text-align: right;
+    margin-top: 5px;
+    font-size: 0.8rem;
+}
+
+.char-counter.text-warning {
+    color: var(--bs-warning) !important;
+    font-weight: bold;
+}
+
+/* Print styles */
+@media print {
+    .navbar, .footer, .btn, .no-print {
+        display: none !important;
+    }
+
+    body {
+        padding: 0;
+        margin: 0;
+        color: #000;
+        background-color: #fff;
+    }
+
+    .container {
+        width: 100%;
+        max-width: 100%;
+        padding: 0;
+        margin: 0;
+    }
+
+    .card {
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    .card-header {
+        background-color: #fff !important;
+        color: #000 !important;
+        border-bottom: 1px solid #ddd !important;
+    }
+
+    .record-printable {
+        padding: 20px;
+    }
+
+    .record-title {
+        text-align: center;
+        margin-bottom: 20px;
+        font-size: 24px;
+    }
+
+    .field-value {
+        background-color: #fff !important;
+        color: #000 !important;
+        border: 1px solid #ddd !important;
+    }
+}
+
+/* Footer styling */
+.footer {
+    margin-top: auto;
+    background-color: var(--bs-body-bg);
+    border-top: 1px solid var(--bs-border-color);
+}

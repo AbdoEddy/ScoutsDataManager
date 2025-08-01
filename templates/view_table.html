@@ -1,0 +1,199 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    {% if is_records_view %}
+        {{ table.display_name }}
+    {% else %}
+        Consulter les données
+    {% endif %}
+{% endblock %}
+
+{% block head %}
+<style>
+    .table-card {
+        transition: transform 0.2s;
+    }
+    .table-card:hover {
+        transform: translateY(-5px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-4 d-flex justify-content-between align-items-center">
+    {% if is_records_view %}
+        <h1><i class="fas fa-table me-2"></i>{{ table.display_name }}</h1>
+        <div>
+            <div class="btn-group">
+                {% if current_user.is_editor() %}
+                    <a href="{{ url_for('add_table_record', table_id=table.id) }}" class="btn btn-primary">
+                        <i class="fas fa-plus-circle me-1"></i>Ajouter
+                    </a>
+                {% endif %}
+            </div>
+
+            <div class="btn-group ms-2">
+                <a href="{{ url_for('export_table', table_id=table.id) }}" class="btn btn-success">
+                    <i class="fas fa-file-excel me-1"></i>Excel
+                </a>
+                {% if is_records_view and records %}
+                    <a href="{{ url_for('export_table_pdf', table_id=table.id) }}" class="btn btn-success" target="_blank">
+                        <i class="fas fa-file-pdf me-1"></i>PDF
+                    </a>
+                {% endif %}
+            </div>
+
+            
+            {% if not is_records_view %}
+                <button onclick="printGenericText()" class="btn btn-info ms-2">
+                    <i class="fas fa-print me-1"></i>Imprimer texte générique
+                </button>
+            {% endif %}
+            <a href="{{ url_for('tables') }}" class="btn btn-outline-secondary ms-2">
+                <i class="fas fa-arrow-left me-1"></i>Retour
+            </a>
+        </div>
+    {% else %}
+        <h1><i class="fas fa-database me-2"></i>Consulter les données</h1>
+        <div>
+            <a href="{{ url_for('print_generic_text') }}" class="btn btn-info" target="_blank">
+                <i class="fas fa-print me-1"></i>Imprimer texte générique
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+{% if is_records_view %}
+    {% if records %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Liste des enregistrements</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Date de création</th>
+                                {% for field in fields %}
+                                <th>{{ field.display_name }}</th>
+                                {% endfor %}
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in records %}
+                            <tr>
+                                <td>{{ record.id }}</td>
+                                <td>{{ record.created_at }}</td>
+                                {% for field in fields %}
+                                <td>
+                                    {% if field.name in record %}
+                                        {% if field.field_type == 'date' and record[field.name] %}
+                                            {{ record[field.name] }}
+                                        {% elif field.field_type == 'number' and record[field.name] is not none %}
+                                            {{ record[field.name] }}
+                                        {% else %}
+                                            {{ record[field.name] or '-' }}
+                                        {% endif %}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                                <td class="text-end">
+                                    <a href="{{ url_for('view_record', table_id=table.id, record_id=record.id) }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% if current_user.is_admin() %}
+                                        <a href="{{ url_for('edit_record', table_id=table.id, record_id=record.id) }}" class="btn btn-sm btn-outline-warning">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        {% if current_user.is_admin() %}
+                                        <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                data-bs-toggle="modal" data-bs-target="#deleteModal{{ record.id }}">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                        {% endif %}
+
+                                        <!-- Delete Confirmation Modal -->
+                                        <div class="modal fade" id="deleteModal{{ record.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ record.id }}" aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title" id="deleteModalLabel{{ record.id }}">Confirmer la suppression</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        Êtes-vous sûr de vouloir supprimer cet enregistrement ? Cette action est irréversible.
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                                        <form action="{{ url_for('delete_record', table_id=table.id, record_id=record.id) }}" method="POST">
+                                                            <button type="submit" class="btn btn-danger">Supprimer</button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>Aucun enregistrement trouvé pour cette table.
+            {% if current_user.is_editor() %}
+                <a href="{{ url_for('add_table_record', table_id=table.id) }}" class="alert-link">Ajouter un enregistrement</a>.
+            {% endif %}
+            {% if current_user.is_admin() %}
+                <a href="{{ url_for('manage_table_permissions', table_id=table.id) }}" class="btn btn-outline-secondary ms-2">
+                    <i class="fas fa-key me-1"></i>Gérer les permissions
+                </a>
+            {% endif %}
+        </div>
+    {% endif %}
+{% else %}
+    <div class="row">
+        {% for table in tables %}
+        <div class="col-md-4 mb-4">
+            <div class="card table-card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">{{ table.display_name }}</h5>
+                </div>
+                <div class="card-body">
+                    <p>{{ table.description or 'Aucune description disponible.' }}</p>
+                </div>
+                <div class="card-footer">
+                    <a href="{{ url_for('table_records', table_id=table.id) }}" class="btn btn-primary">
+                        <i class="fas fa-eye me-1"></i>Consulter
+                    </a>
+                    {% if current_user.is_editor() %}
+                    <a href="{{ url_for('add_table_record', table_id=table.id) }}" class="btn btn-outline-light">
+                        <i class="fas fa-plus-circle me-1"></i>Ajouter
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+        {% if not tables %}
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>Aucune table n'est disponible.
+                {% if current_user.is_admin() %}
+                    <a href="{{ url_for('manage_tables') }}" class="alert-link">Créer une table</a>.
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+{% endif %}
+{% endblock %}

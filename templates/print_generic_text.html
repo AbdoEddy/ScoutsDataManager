@@ -1,0 +1,38 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Autorisation de Camp</title>
+    <style>
+        @media print {
+            body { margin: 0; padding: 20mm; }
+            .no-print { display: none; }
+        }
+        .content {
+            margin: 20px 0;
+            line-height: 1.6;
+        }
+        {{ template.css or '' }}
+    </style>
+    <script>
+        window.onload = function() {
+            window.print();
+        }
+    </script>
+</head>
+<body>
+    <div class="header">
+        {% if template.logo_url %}
+            <img src="{{ template.logo_url }}" alt="Logo" style="max-height: 100px; margin-bottom: 20px;"><br>
+        {% endif %}
+        {{ template.header_html | safe }}
+    </div>
+    <div class="content">
+        {{ text.content | safe }}
+    </div>
+    <div class="footer">
+        {{ template.footer_html.replace('{{date}}', date) | safe }}
+    </div>
+</body>
+</html>

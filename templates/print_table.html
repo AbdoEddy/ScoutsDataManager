@@ -1,0 +1,65 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{ table.display_name }}</title>
+    <style>
+        @media print {
+            body { margin: 0; padding: 20mm; }
+            .no-print { display: none; }
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f5f5f5;
+        }
+        {{ template.css or '' }}
+    </style>
+    <script>
+        window.onload = function() {
+            window.print();
+        }
+    </script>
+</head>
+<body>
+    <div class="header">
+        {% if template.logo_url %}
+            <img src="{{ template.logo_url }}" alt="Logo" style="max-height: 100px; margin-bottom: 20px;"><br>
+        {% endif %}
+        {{ template.header_html | safe }}
+    </div>
+    <div class="content">
+        <h2>{{ table.display_name }}</h2>
+        <table>
+            <thead>
+                <tr>
+                    {% for field in fields %}
+                        <th>{{ field.display_name }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in records %}
+                    <tr>
+                        {% for field in fields %}
+                            <td>{{ record[field.name] or '-' }}</td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="footer">
+        {{ template.footer_html.replace('{{date}}', date) | safe }}
+    </div>
+</body>
+</html>

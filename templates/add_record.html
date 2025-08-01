@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    {% if table %}
+        Ajouter - {{ table.display_name }}
+    {% else %}
+        Ajouter un enregistrement
+    {% endif %}
+{% endblock %}
+
+{% block head %}
+<style>
+    .input-group-text {
+        background-color: var(--bs-dark-bg-subtle);
+        border-color: var(--bs-border-color);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-4 d-flex justify-content-between align-items-center">
+    {% if table %}
+        <h1><i class="fas fa-plus-circle me-2"></i>Ajouter un enregistrement - {{ table.display_name }}</h1>
+        <a href="{{ url_for('table_records', table_id=table.id) }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Retour
+        </a>
+    {% else %}
+        <h1><i class="fas fa-plus-circle me-2"></i>Ajouter un enregistrement</h1>
+    {% endif %}
+</div>
+
+{% if table %}
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Formulaire d'ajout</h5>
+        </div>
+        <div class="card-body">
+            <form action="{{ url_for('add_table_record', table_id=table.id) }}" method="POST">
+                {% for field in fields %}
+                <div class="mb-3">
+                    <label for="field_{{ field.id }}" class="form-label">
+                        {{ field.display_name }}
+                        {% if field.required %}
+                            <span class="text-danger">*</span>
+                        {% endif %}
+                    </label>
+
+                    {% if field.field_type == 'text' %}
+                        <input type="text" class="form-control" id="field_{{ field.id }}" name="field_{{ field.id }}"
+                               {% if field.required %}required{% endif %}>
+
+                    {% elif field.field_type == 'number' %}
+                        <input type="number" class="form-control" id="field_{{ field.id }}" name="field_{{ field.id }}" step="any"
+                               {% if field.required %}required{% endif %}>
+
+                    {% elif field.field_type == 'date' %}
+                        <input type="date" class="form-control" id="field_{{ field.id }}" name="field_{{ field.id }}"
+                               {% if field.required %}required{% endif %}>
+
+                    {% elif field.field_type == 'dropdown' %}
+                        <select class="form-select" id="field_{{ field.id }}" name="field_{{ field.id }}"
+                                {% if field.required %}required{% endif %}>
+                            <option value="">Sélectionnez une option</option>
+                            {% for option in field.get_options() %}
+                                <option value="{{ option }}">{{ option }}</option>
+                            {% endfor %}
+                        </select>
+                    {% endif %}
+                </div>
+                {% endfor %}
+
+                <div class="d-flex justify-content-end mt-4">
+                    <a href="{{ url_for('table_records', table_id=table.id) }}" class="btn btn-outline-secondary me-2">Annuler</a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i>Enregistrer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+{% else %}
+    <div class="row">
+        {% for table in tables %}
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">{{ table.display_name }}</h5>
+                </div>
+                <div class="card-body">
+                    <p>{{ table.description or 'Aucune description disponible.' }}</p>
+                </div>
+                <div class="card-footer bg-dark">
+                    <a href="{{ url_for('add_table_record', table_id=table.id) }}" class="btn btn-primary d-block">
+                        <i class="fas fa-plus-circle me-1"></i>Ajouter un enregistrement
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+        {% if not tables %}
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>Aucune table n'est disponible.
+                {% if current_user.is_admin() %}
+                    <a href="{{ url_for('manage_tables') }}" class="alert-link">Créer une table</a>.
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+{% endif %}
+{% endblock %}
